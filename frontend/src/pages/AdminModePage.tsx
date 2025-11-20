@@ -1,68 +1,93 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Upload, MessageCircle, FileText, TrendingUp } from 'lucide-react'
+import { DashboardLayout } from '../components/layout/DashboardLayout'
+import { Card } from '../components/ui/Card'
+import { StatCard } from '../components/ui/StatCard'
 import UploadTab from '../components/UploadTab'
 import VOCTab from '../components/VOCTab'
+import { useQuery } from '@tanstack/react-query'
+import { uploadAPI, vocAPI } from '../api/client'
 
 export default function AdminModePage() {
-  const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState<'upload' | 'voc'>('upload')
+  
+  const { data: files } = useQuery({
+    queryKey: ['uploadedFiles'],
+    queryFn: uploadAPI.getFiles
+  })
+  
+  const { data: vocs } = useQuery({
+    queryKey: ['vocs'],
+    queryFn: vocAPI.getAll
+  })
+
+  const totalFiles = files?.length || 0
+  const processedFiles = files?.filter((f: any) => f.processed === 1).length || 0
+  const totalVocs = vocs?.length || 0
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-gray-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <h1 className="text-2xl font-bold text-white">문서박사</h1>
-            <span className="text-sm text-gray-300 bg-gray-700 px-3 py-1 rounded-full">관리자 모드</span>
-          </div>
-          <button
-            onClick={() => navigate('/')}
-            className="text-gray-300 hover:text-white transition-colors"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </button>
-        </div>
-      </header>
+    <DashboardLayout title="관리자 모드" mode="admin">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">관리자 대시보드</h2>
+        <p className="text-gray-600">문서 관리 및 사용자 피드백 분석</p>
+      </div>
 
-      {/* Tabs */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex space-x-8">
+      {/* Statistics */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <StatCard
+          title="총 문서 수"
+          value={totalFiles}
+          icon={<FileText className="w-6 h-6" />}
+        />
+        <StatCard
+          title="처리 완료"
+          value={processedFiles}
+          icon={<TrendingUp className="w-6 h-6" />}
+          trend={{ value: `${totalFiles > 0 ? Math.round((processedFiles / totalFiles) * 100) : 0}%`, isPositive: true }}
+        />
+        <StatCard
+          title="VOC 접수"
+          value={totalVocs}
+          icon={<MessageCircle className="w-6 h-6" />}
+        />
+      </div>
+
+      {/* Tabs Navigation */}
+      <div className="mb-6">
+        <Card className="p-2">
+          <div className="flex space-x-2">
             <button
               onClick={() => setActiveTab('upload')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-sm transition-all duration-200 ${
                 activeTab === 'upload'
-                  ? 'border-gray-800 text-gray-800'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              자료 업로드
+              <Upload className="w-4 h-4" />
+              <span>문서 업로드</span>
             </button>
             <button
               onClick={() => setActiveTab('voc')}
-              className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium text-sm transition-all duration-200 ${
                 activeTab === 'voc'
-                  ? 'border-gray-800 text-gray-800'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ? 'bg-purple-600 text-white shadow-md'
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
-              VOC 현황
+              <MessageCircle className="w-4 h-4" />
+              <span>VOC 현황</span>
             </button>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <div className="transition-all duration-300">
         {activeTab === 'upload' ? <UploadTab /> : <VOCTab />}
-      </main>
-    </div>
+      </div>
+    </DashboardLayout>
   )
 }
 

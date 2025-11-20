@@ -76,3 +76,9 @@ logs/
 # OS
 Thumbs.db
 .DS_Store
+
+# Test Documents
+*.docx
+*.xlsx
+*.pptx
+*.pdf
