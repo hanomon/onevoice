@@ -9,6 +9,7 @@ from ..models import UploadedFile
 from ..schemas import FileUploadResponse, UploadedFileResponse
 from ..services.file_processor import FileProcessor
 from ..services.rag_service import RAGService
+from ..services.excel_analyzer import ExcelAnalyzer
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -112,4 +113,62 @@ async def delete_file(file_id: int, db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"파일 삭제 중 오류가 발생했습니다: {str(e)}")
+
+
+@router.get("/analyze-excel/{file_id}")
+async def analyze_excel_file(file_id: int, db: Session = Depends(get_db)):
+    """엑셀 파일 분석 (메타데이터 및 통계)"""
+    file = db.query(UploadedFile).filter(UploadedFile.id == file_id).first()
+    if not file:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    
+    # 엑셀 파일인지 확인
+    if file.file_type not in ['.xlsx', '.xls']:
+        raise HTTPException(status_code=400, detail="엑셀 파일만 분석 가능합니다.")
+    
+    try:
+        # 파일 분석
+        analysis = ExcelAnalyzer.analyze_excel(file.file_path)
+        
+        # 요약 정보 생성
+        summary = ExcelAnalyzer.generate_summary(file.file_path)
+        
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "analysis": analysis,
+            "summary": summary
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"엑셀 분석 중 오류가 발생했습니다: {str(e)}")
+
+
+@router.post("/search-excel/{file_id}")
+async def search_in_excel_file(
+    file_id: int, 
+    keyword: str, 
+    db: Session = Depends(get_db)
+):
+    """엑셀 파일 내에서 키워드 검색"""
+    file = db.query(UploadedFile).filter(UploadedFile.id == file_id).first()
+    if not file:
+        raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
+    
+    # 엑셀 파일인지 확인
+    if file.file_type not in ['.xlsx', '.xls']:
+        raise HTTPException(status_code=400, detail="엑셀 파일만 검색 가능합니다.")
+    
+    try:
+        # 엑셀 내에서 검색
+        results = ExcelAnalyzer.search_in_excel(file.file_path, keyword)
+        
+        return {
+            "file_id": file_id,
+            "filename": file.filename,
+            "keyword": keyword,
+            "result_count": len(results),
+            "results": results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"엑셀 검색 중 오류가 발생했습니다: {str(e)}")
 
